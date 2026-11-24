@@ -30,7 +30,7 @@ class LocalStorageRepository<T extends { id: string }> implements Repository<T> 
     } catch (err) {
       this.cache = null;
       throw new Error(
-        'No se pudo guardar en el navegador (¿almacenamiento lleno o bloqueado?). Exportá un respaldo JSON.',
+        'No se pudo guardar en este navegador. Probá liberar espacio o descargá un respaldo desde Datos y respaldo.',
         { cause: err },
       );
     }
@@ -62,7 +62,7 @@ export function createLocalStorageRepositories(): Repositories {
   );
   return {
     ...(repos as unknown as Omit<Repositories, 'label' | 'kind' | 'isInitialized' | 'markInitialized'>),
-    label: 'Este navegador (localStorage)',
+    label: 'Este navegador / dispositivo',
     kind: 'local',
     async isInitialized() {
       return localStorage.getItem(INIT_KEY) === '1';

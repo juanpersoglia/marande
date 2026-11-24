@@ -26,12 +26,12 @@ export default function DatosPage() {
 
   const exportJson = () => {
     downloadFile(`${APP_ID}-${todayISO()}.json`, exportDatabaseJSON(db), 'application/json;charset=utf-8');
-    toast('Respaldo JSON descargado.');
+    toast('Respaldo descargado. Guardalo en un lugar seguro.');
   };
 
   const exportCsv = (key: CollectionKey) => {
     downloadFile(`${key}-${todayISO()}.csv`, exportCollectionCSV(key, db));
-    toast(`${CSV_LABELS[key]} exportado a CSV.`);
+    toast(`Planilla de ${CSV_LABELS[key].toLowerCase()} descargada.`);
   };
 
   const onJsonFile = async (file: File) => {
@@ -41,25 +41,25 @@ export default function DatosPage() {
       const data = parseDatabaseJSON(text);
       const counts = COLLECTION_KEYS.filter((k) => data[k]).map((k) => `${CSV_LABELS[k]}: ${data[k]!.length}`).join(', ');
       const ok = await confirm({
-        title: importMode === 'replace' ? 'Reemplazar todos los datos' : 'Fusionar datos',
+        title: importMode === 'replace' ? '¿Reemplazar los datos actuales?' : '¿Sumar estos datos?',
         message: (
           <>
             <p className="mb-2">Archivo: <strong>{file.name}</strong></p>
             <p className="mb-2">{counts}</p>
             <p>
               {importMode === 'replace'
-                ? 'Se reemplazarán las colecciones incluidas en el archivo.'
-                : 'Se fusionarán por ID (los existentes se actualizan; los nuevos se agregan).'}
+                ? 'Se van a borrar los datos actuales de esas secciones y se van a cargar los del archivo.'
+                : 'Se van a agregar los nuevos y actualizar los que ya existan. No se pierde el resto.'}
             </p>
           </>
         ),
-        confirmLabel: importMode === 'replace' ? 'Reemplazar' : 'Fusionar',
+        confirmLabel: importMode === 'replace' ? 'Reemplazar' : 'Sumar datos',
         tone: importMode === 'replace' ? 'danger' : 'primary',
       });
       if (!ok) return;
       const summary = await importDatabase(data, importMode);
       const detail = Object.entries(summary).map(([k, n]) => `${CSV_LABELS[k as CollectionKey]}: ${n}`).join(', ');
-      toast(`Importación OK · ${detail}`);
+      toast(`Datos cargados · ${detail}`);
     } catch (err) {
       toastError(err);
     } finally {
@@ -80,16 +80,23 @@ export default function DatosPage() {
       const payload = { [csvKey]: result.items } as Partial<Database>;
       if (result.newAreas.length) payload.areas = [...db.areas, ...result.newAreas];
       const ok = await confirm({
-        title: `Importar ${CSV_LABELS[csvKey]}`,
+        title: `Importar ${CSV_LABELS[csvKey].toLowerCase()}`,
         message: (
           <>
-            <p className="mb-2">{result.items.length} filas válidas{result.errors.length ? ` · ${result.errors.length} con error` : ''}.</p>
+            <p className="mb-2">
+              Se encontraron {result.items.length} {result.items.length === 1 ? 'fila lista' : 'filas listas'}
+              {result.errors.length ? ` y ${result.errors.length} con error` : ''}.
+            </p>
             {result.errors.length > 0 && (
               <ul className="mb-2 max-h-32 list-disc overflow-auto pl-5 text-xs text-amber-800">
                 {result.errors.slice(0, 8).map((e, i) => <li key={i}>{e}</li>)}
               </ul>
             )}
-            <p>Modo: {importMode === 'replace' ? 'reemplazar colección' : 'fusionar por ID'}.</p>
+            <p>
+              {importMode === 'replace'
+                ? 'Se reemplazan todos los datos de esta sección.'
+                : 'Se suman a lo que ya hay (si el código se repite, se actualiza).'}
+            </p>
           </>
         ),
         confirmLabel: 'Importar',
@@ -97,7 +104,7 @@ export default function DatosPage() {
       });
       if (!ok) return;
       await importDatabase(payload, importMode === 'replace' ? 'replace' : 'merge');
-      toast(`Importados ${result.items.length} registros de ${CSV_LABELS[csvKey]}.`);
+      toast(`Se importaron ${result.items.length} registros de ${CSV_LABELS[csvKey].toLowerCase()}.`);
     } catch (err) {
       toastError(err);
     } finally {
@@ -109,8 +116,8 @@ export default function DatosPage() {
   const restoreDemo = async () => {
     const ok = await confirm({
       title: 'Restaurar datos de ejemplo',
-      message: 'Se reemplazarán todos los datos actuales por el set de demostración. Esta acción no se puede deshacer (salvo que tengas un respaldo).',
-      confirmLabel: 'Restaurar demo',
+      message: 'Se van a reemplazar todos tus datos actuales por los de demostración. Si querés conservarlos, primero descargá un respaldo.',
+      confirmLabel: 'Restaurar ejemplos',
     });
     if (!ok) return;
     try {
@@ -124,7 +131,7 @@ export default function DatosPage() {
   const clearData = async () => {
     const ok = await confirm({
       title: 'Vaciar datos',
-      message: 'Se borrarán pacientes, evoluciones, talleres y facturación. Se conservan las áreas/especialidades.',
+      message: 'Se van a borrar pacientes, evoluciones, talleres y facturación. Las áreas/especialidades se mantienen.',
       confirmLabel: 'Vaciar todo',
     });
     if (!ok) return;
@@ -140,15 +147,15 @@ export default function DatosPage() {
     <>
       <PageHeader
         title="Datos y respaldo"
-        description="Importá / exportá JSON o CSV para no perder información al cambiar de navegador o equipo. La capa de repositorio permite migrar a API, Supabase o Sheets sin reescribir la interfaz."
+        description="Acá podés guardar una copia de toda la información o cargarla en otra computadora o celular. Es la forma de no perder lo que cargaste."
       />
 
       <div className="mb-6 rounded-xl border border-brand-200 bg-brand-50 px-4 py-4 text-sm text-brand-900 sm:px-5">
-        <p className="font-semibold">Almacenamiento actual: {storage.label}</p>
+        <p className="font-semibold">Dónde se guardan tus datos: {storage.label}</p>
         <p className="mt-1 text-brand-800">
           {storage.kind === 'local'
-            ? 'Los datos viven en localStorage de este navegador. Hacé un respaldo JSON periódicamente.'
-            : 'Los datos se persisten en el servidor Express (archivo db.json).'}
+            ? 'La información queda en este navegador. Si cambiás de equipo o borrás los datos del sitio, se pierde. Por eso conviene descargar un respaldo de vez en cuando.'
+            : 'La información se guarda en el servidor del instituto y se comparte entre quienes usan el sistema.'}
         </p>
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-brand-800">
           <li>{db.pacientes.length} pacientes</li>
@@ -161,57 +168,66 @@ export default function DatosPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Respaldo completo (JSON)" description="Incluye todas las colecciones. Ideal para migrar de equipo." />
+          <CardHeader
+            title="Copia de seguridad completa"
+            description="Descargá un solo archivo con todo (pacientes, evoluciones, talleres y facturación). Ideal para pasarlo a otra PC."
+          />
           <div className="space-y-4 p-5">
             <div className="flex flex-wrap gap-2">
-              <Button onClick={exportJson}><Download className="size-4" />Exportar JSON</Button>
+              <Button onClick={exportJson}><Download className="size-4" />Descargar respaldo</Button>
               <Button variant="secondary" disabled={busy} onClick={() => jsonInput.current?.click()}>
-                <Upload className="size-4" />Importar JSON
+                <Upload className="size-4" />Cargar respaldo
               </Button>
               <input ref={jsonInput} type="file" accept=".json,application/json" className="hidden" onChange={(e) => e.target.files?.[0] && onJsonFile(e.target.files[0])} />
             </div>
             <div>
-              <p className="mb-1 text-sm font-medium text-slate-700">Modo de importación</p>
-              <Select value={importMode} onChange={(e) => setImportMode(e.target.value as ImportMode)} aria-label="Modo de importación">
-                <option value="merge">Fusionar por ID (recomendado)</option>
-                <option value="replace">Reemplazar colecciones del archivo</option>
+              <p className="mb-1 text-sm font-medium text-slate-700">Al cargar un respaldo</p>
+              <Select value={importMode} onChange={(e) => setImportMode(e.target.value as ImportMode)} aria-label="Cómo cargar el respaldo">
+                <option value="merge">Sumar a lo que ya hay (recomendado)</option>
+                <option value="replace">Reemplazar los datos actuales</option>
               </Select>
             </div>
             <p className="flex items-start gap-2 text-xs text-slate-500">
               <FileJson className="mt-0.5 size-4 shrink-0" />
-              El archivo incluye un encabezado con versión y fecha de exportación para trazabilidad.
+              El archivo se descarga con la fecha del día para que sepas cuándo lo hiciste.
             </p>
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Importar / exportar CSV" description="Una colección por archivo. Compatible con Excel (separador ;)." />
+          <CardHeader
+            title="Exportar o importar planillas"
+            description="Una sección por archivo, para abrir o editar en Excel o Google Sheets."
+          />
           <div className="space-y-4 p-5">
             <div>
-              <p className="mb-1 text-sm font-medium text-slate-700">Colección</p>
-              <Select value={csvKey} onChange={(e) => setCsvKey(e.target.value as CollectionKey)} aria-label="Colección CSV">
+              <p className="mb-1 text-sm font-medium text-slate-700">Qué sección</p>
+              <Select value={csvKey} onChange={(e) => setCsvKey(e.target.value as CollectionKey)} aria-label="Sección a exportar o importar">
                 {COLLECTION_KEYS.map((k) => <option key={k} value={k}>{CSV_LABELS[k]}</option>)}
               </Select>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => exportCsv(csvKey)}><Download className="size-4" />Exportar CSV</Button>
+              <Button variant="secondary" onClick={() => exportCsv(csvKey)}><Download className="size-4" />Descargar planilla</Button>
               <Button variant="secondary" disabled={busy} onClick={() => csvInput.current?.click()}>
-                <Upload className="size-4" />Importar CSV
+                <Upload className="size-4" />Cargar planilla
               </Button>
               <input ref={csvInput} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => e.target.files?.[0] && onCsvFile(e.target.files[0])} />
             </div>
             <p className="flex items-start gap-2 text-xs text-slate-500">
               <FileSpreadsheet className="mt-0.5 size-4 shrink-0" />
-              Podés exportar cada módulo por separado desde acá, o usar los botones CSV de Evoluciones / Facturación con el filtro aplicado.
+              También podés descargar planillas desde Evoluciones o Facturación con los filtros que tengas aplicados.
             </p>
           </div>
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader title="Mantenimiento" description="Utilidades para demos y entornos de prueba." />
+          <CardHeader
+            title="Opciones de prueba"
+            description="Útil si querés volver a los datos de ejemplo o empezar de cero."
+          />
           <div className="flex flex-wrap gap-3 p-5">
-            <Button variant="secondary" onClick={restoreDemo}><RefreshCcw className="size-4" />Restaurar datos de ejemplo</Button>
-            <Button variant="danger" onClick={clearData}><Trash2 className="size-4" />Vaciar datos</Button>
+            <Button variant="secondary" onClick={restoreDemo}><RefreshCcw className="size-4" />Volver a datos de ejemplo</Button>
+            <Button variant="danger" onClick={clearData}><Trash2 className="size-4" />Borrar todos los datos</Button>
           </div>
         </Card>
       </div>

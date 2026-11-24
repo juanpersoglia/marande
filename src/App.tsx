@@ -31,7 +31,7 @@ function Gate() {
         <div className="max-w-md rounded-xl border border-red-200 bg-white p-6 text-center shadow-xs">
           <h1 className="text-lg font-semibold text-slate-900">No se pudieron cargar los datos</h1>
           <p className="mt-2 text-sm text-slate-600">{error}</p>
-          <p className="mt-1 text-xs text-slate-400">Almacenamiento: {storage.label}</p>
+          <p className="mt-1 text-xs text-slate-400">Datos: {storage.label}</p>
           <Button className="mt-4" onClick={() => window.location.reload()}>Reintentar</Button>
         </div>
       </div>

@@ -57,7 +57,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="m-3 rounded-lg bg-black/15 p-3 text-xs text-brand-100">
         <div className="flex items-center gap-2 font-medium text-white">
           <StorageIcon className="size-4" />
-          Almacenamiento
+          Datos guardados en
         </div>
         <p className="mt-1 text-brand-200">{storage.label}</p>
       </div>

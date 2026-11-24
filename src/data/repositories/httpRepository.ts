@@ -47,7 +47,7 @@ export function createHttpRepositories(apiBase = '/api'): Repositories {
   );
   return {
     ...(repos as unknown as Omit<Repositories, 'label' | 'kind' | 'isInitialized' | 'markInitialized'>),
-    label: 'Servidor (API Express)',
+    label: 'Servidor del instituto',
     kind: 'api',
     async isInitialized() {
       const status = await request<{ initialized: boolean }>(`${apiBase}/status`);

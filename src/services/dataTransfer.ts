@@ -32,12 +32,12 @@ export function parseDatabaseJSON(text: string): Partial<Database> {
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('El archivo no es un JSON válido.');
+    throw new Error('El archivo de respaldo no se pudo leer. ¿Es el correcto?');
   }
   const root = (parsed && typeof parsed === 'object' && 'data' in parsed ? (parsed as { data: unknown }).data : parsed) as
     | Record<string, unknown>
     | undefined;
-  if (!root || typeof root !== 'object') throw new Error('El archivo no tiene el formato esperado.');
+  if (!root || typeof root !== 'object') throw new Error('Este archivo no parece un respaldo de la historia clínica.');
 
   const out: Partial<Database> = {};
   for (const key of COLLECTION_KEYS) {
@@ -52,7 +52,7 @@ export function parseDatabaseJSON(text: string): Partial<Database> {
     (out as Record<string, unknown>)[key] = items;
   }
   if (Object.keys(out).length === 0) {
-    throw new Error('No se encontraron datos reconocibles (pacientes, evoluciones, talleres, facturacion, areas).');
+    throw new Error('No se encontraron datos de pacientes, evoluciones, talleres o facturación en el archivo.');
   }
   return out;
 }
@@ -109,7 +109,7 @@ export interface CsvImportResult {
 
 export function importCollectionCSV(key: CollectionKey, text: string, db: Database): CsvImportResult {
   const rows = parseCSV(text);
-  if (rows.length < 2) throw new Error('El CSV está vacío o no tiene encabezados.');
+  if (rows.length < 2) throw new Error('La planilla está vacía o le faltan los títulos de columna.');
   const headers = rows[0].map(normHeader);
   const result: CsvImportResult = { items: [], newAreas: [], errors: [] };
 

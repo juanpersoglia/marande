@@ -135,7 +135,7 @@ export default function FacturacionPage() {
 
   const exportCsv = () => {
     downloadFile(`facturacion-${periodo || 'filtrada'}.csv`, exportCollectionCSV('facturacion', db, { facturacion: list }));
-    toast(`Exportados ${list.length} registros (CSV).`, 'info');
+    toast(`Planilla descargada (${list.length} registros).`, 'info');
   };
 
   const copyResumen = async () => {
@@ -196,7 +196,7 @@ export default function FacturacionPage() {
         </div>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" onClick={exportCsv}><Download className="size-3.5" />CSV</Button>
+            <Button size="sm" variant="secondary" onClick={exportCsv}><Download className="size-3.5" />Descargar planilla</Button>
             <Button size="sm" variant="secondary" onClick={copyResumen}><Copy className="size-3.5" />Copiar resumen</Button>
           </div>
           {anteriores && (

@@ -8,7 +8,7 @@ import { EvolucionFormModal } from '@/features/evoluciones/EvolucionForm';
 import { EvolucionItem } from '@/features/evoluciones/EvolucionItem';
 import { downloadFile } from '@/lib/csv';
 import { currentPeriod, formatPeriod, normalizeText } from '@/lib/format';
-import { CSV_LABELS, exportCollectionCSV } from '@/services/dataTransfer';
+import { exportCollectionCSV } from '@/services/dataTransfer';
 import { sortEvolucionesDesc } from '@/services/domain';
 import { listarProfesionales } from '@/services/queries';
 import { useData } from '@/store/DataContext';
@@ -80,7 +80,7 @@ export default function EvolucionesPage() {
 
   const exportCsv = () => {
     downloadFile(`evoluciones-${periodo || 'todas'}.csv`, exportCollectionCSV('evoluciones', db, { evoluciones: list }));
-    toast(`Exportadas ${list.length} evoluciones (CSV).`, 'info');
+    toast(`Planilla descargada (${list.length} evoluciones).`, 'info');
   };
 
   return (
@@ -91,7 +91,7 @@ export default function EvolucionesPage() {
         actions={
           <>
             <Button variant="secondary" onClick={() => setAreasOpen(true)}><Settings2 className="size-4" />Áreas</Button>
-            <Button variant="secondary" onClick={exportCsv}>Exportar CSV</Button>
+            <Button variant="secondary" onClick={exportCsv}>Descargar planilla</Button>
             <Button onClick={() => setNueva(true)}><ClipboardPlus className="size-4" />Nueva evolución</Button>
           </>
         }
@@ -123,7 +123,7 @@ export default function EvolucionesPage() {
             {periodos.map((p) => <option key={p} value={p}>{formatPeriod(p)}</option>)}
           </Select>
         </div>
-        <p className="mt-3 text-sm text-slate-500">{list.length} {list.length === 1 ? 'evolución' : 'evoluciones'} · {CSV_LABELS.evoluciones}</p>
+        <p className="mt-3 text-sm text-slate-500">{list.length} {list.length === 1 ? 'evolución' : 'evoluciones'}</p>
       </Card>
 
       <div className="space-y-3">
