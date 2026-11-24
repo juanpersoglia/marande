@@ -1,0 +1,65 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Azul petróleo / verde azulado */
+  --color-brand-50: #effafa;
+  --color-brand-100: #d3f1f0;
+  --color-brand-200: #a9e2e2;
+  --color-brand-300: #74ccd0;
+  --color-brand-400: #3fadb6;
+  --color-brand-500: #278f9c;
+  --color-brand-600: #1f7582;
+  --color-brand-700: #1e5e6a;
+  --color-brand-800: #1d4d58;
+  --color-brand-900: #1b414b;
+  --color-brand-950: #0c2830;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-slate-100 font-sans text-slate-800 antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+  button:not(:disabled),
+  [role='button'],
+  select {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .field-control {
+    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-xs
+      placeholder:text-slate-400
+      focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none
+      disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500;
+  }
+  .field-control[aria-invalid='true'] {
+    @apply border-red-400 focus:border-red-500 focus:ring-red-500/20;
+  }
+  .th {
+    @apply px-4 py-2.5 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-slate-500 uppercase;
+  }
+  .td {
+    @apply px-4 py-3 align-middle text-sm;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  main {
+    padding: 0 !important;
+  }
+}
