@@ -5,7 +5,7 @@ import { estadoCUD } from '@/services/domain';
 import type { EstadoPaciente, EstadoPresentacion, Modalidad, Paciente, TipoCobertura } from '@/types';
 
 export function EstadoPacienteBadge({ estado }: { estado: EstadoPaciente }) {
-  return <Badge tone={estado === 'Activo' ? 'success' : 'neutral'}>{estado}</Badge>;
+  return <Badge tone={estado === 'Activo' ? 'success' : estado === 'Otros' ? 'warning' : 'neutral'}>{estado}</Badge>;
 }
 
 export function PresentacionBadge({ estado }: { estado: EstadoPresentacion }) {
@@ -21,7 +21,7 @@ export function TipoCoberturaBadge({ tipo }: { tipo: TipoCobertura }) {
   return <Badge tone={tipo === 'Particular' ? 'warning' : tipo === 'Prepaga' ? 'info' : 'neutral'}>{tipo}</Badge>;
 }
 
-export function CudBadge({ paciente, showDate = true }: { paciente: Pick<Paciente, 'vencimientoCUD' | 'nroCUD'>; showDate?: boolean }) {
+export function CudBadge({ paciente, showDate = true }: { paciente: Pick<Paciente, 'vencimientoCUD' | 'nroCUD' | 'estadoCUD'>; showDate?: boolean }) {
   const e = estadoCUD(paciente);
   const date = showDate && paciente.vencimientoCUD ? ` · ${formatDate(paciente.vencimientoCUD)}` : '';
   switch (e.nivel) {

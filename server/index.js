@@ -13,7 +13,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 
-const COLLECTIONS = ['pacientes', 'evoluciones', 'talleres', 'facturacion', 'areas'];
+const COLLECTIONS = ['pacientes', 'evoluciones', 'talleres', 'facturacion', 'areas', 'medicaciones'];
 
 // ---------- Persistencia en archivo (escritura atómica) ----------
 function readDb() {

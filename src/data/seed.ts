@@ -1,12 +1,14 @@
 import { addDays, formatPeriod, nowTime, parseISO, shiftPeriod, todayISO } from '@/lib/format';
 import { nextFacturacionIds } from '@/services/ids';
 import { practicaDeEvolucion, valorSugerido } from '@/services/domain';
-import type { Area, Database, Evolucion, Facturacion, Paciente, Taller } from '@/types';
+import { normalizePaciente } from '@/data/normalize';
+import type { Area, Database, Evolucion, Facturacion, Medicacion, Paciente, Taller } from '@/types';
 
 // Datos de ejemplo (ficticios). Las fechas se generan relativas a "hoy" para que el
 // dashboard, los vencimientos de CUD y la facturación del mes se vean siempre coherentes.
 
 const AREAS: Area[] = [
+  // Especialidades clínicas (prestaciones)
   { id: 'ARE-01', nombre: 'Kinesiología' },
   { id: 'ARE-02', nombre: 'Fonoaudiología' },
   { id: 'ARE-03', nombre: 'Terapia Ocupacional' },
@@ -14,6 +16,13 @@ const AREAS: Area[] = [
   { id: 'ARE-05', nombre: 'Psicología' },
   { id: 'ARE-06', nombre: 'Musicoterapia' },
   { id: 'ARE-07', nombre: 'Psicomotricidad' },
+  // Seguimiento institucional (Marandé)
+  { id: 'ARE-08', nombre: 'General' },
+  { id: 'ARE-09', nombre: 'Talleres' },
+  { id: 'ARE-10', nombre: 'Familiar' },
+  { id: 'ARE-11', nombre: 'Reuniones clínicas' },
+  { id: 'ARE-12', nombre: 'Informes' },
+  { id: 'ARE-13', nombre: 'Incidentes o situaciones de crisis' },
 ];
 
 interface PlanItem {
@@ -23,7 +32,28 @@ interface PlanItem {
   prof: string;
 }
 
-type SeedPaciente = Omit<Paciente, 'id' | 'vencimientoCUD'> & { cudDias: number | null; plan: PlanItem[] };
+/** Campos mínimos del seed; el resto se completa en buildSeed. */
+type SeedPaciente = {
+  nombre: string;
+  dni: string;
+  fechaNacimiento: string;
+  diagnostico: string;
+  nroCUD: string;
+  cudDias: number | null;
+  tipoCobertura: Paciente['tipoCobertura'];
+  cobertura: string;
+  nroAfiliado: string;
+  tutor: string;
+  telefono: string;
+  estado: Paciente['estado'];
+  plan: PlanItem[];
+  genero?: string;
+  domicilio?: string;
+  sube?: Paciente['sube'];
+  pension?: Paciente['pension'];
+  diasAsistencia?: Paciente['diasAsistencia'];
+  medicamentos?: Omit<Medicacion, 'id' | 'pacienteId' | 'historial'>[];
+};
 
 const PROF = {
   ries: 'Lic. Marcelo Ríos',
@@ -178,19 +208,35 @@ const PACIENTES: SeedPaciente[] = [
   },
 ];
 
-interface TallerSeed extends Omit<Taller, 'inscriptos'> {
+interface TallerSeed {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  diasHorarios: string;
+  terapeutas: string[];
+  cupo: number;
+  activo: boolean;
+  objetivos: string;
+  planTrabajo: string;
+  materiales: string;
+  notasEvolucion: string;
   dows: number[];
   hora: string;
   areaId: string;
-  inscriptos: number[]; // posición (1-based) en PACIENTES
+  inscriptos: number[];
   notas: string[];
 }
 
 const TALLERES: TallerSeed[] = [
   {
-    id: 'TAL-01', nombre: 'Taller de Habilidades Sociales', diasHorarios: 'Martes y jueves de 16:00 a 17:30',
+    id: 'TAL-01', nombre: 'Taller de Habilidades Sociales',
+    descripcion: 'Espacio grupal para practicar comunicación, turnos y resolución de conflictos entre pares.',
+    diasHorarios: 'Martes y jueves de 16:00 a 17:30',
     terapeutas: [PROF.salas, PROF.aguirre], cupo: 8, activo: true, dows: [2, 4], hora: '16:00', areaId: 'ARE-05',
-    objetivos: 'Favorecer la comunicación, el respeto de turnos y la resolución de conflictos en grupo. Promover la interacción entre pares y la autonomía en situaciones cotidianas.',
+    objetivos: 'Favorecer la comunicación, el respeto de turnos y la resolución de conflictos en grupo.',
+    planTrabajo: 'Juego de roles, dinámicas cooperativas y trabajo con tarjetas de emociones.',
+    materiales: 'Tarjetas de emociones, afiches, material de papelería.',
+    notasEvolucion: 'El grupo sostiene bien las consignas. Se observa avance en el respeto de turnos.',
     inscriptos: [1, 4, 5, 7, 10, 12],
     notas: [
       'Se trabajó con juego de roles sobre cómo pedir ayuda y saludar. El grupo participó con entusiasmo y respetó los turnos de palabra.',
@@ -200,9 +246,14 @@ const TALLERES: TallerSeed[] = [
     ],
   },
   {
-    id: 'TAL-02', nombre: 'Taller de Música y Expresión', diasHorarios: 'Lunes de 15:30 a 16:30',
+    id: 'TAL-02', nombre: 'Taller de Música y Expresión',
+    descripcion: 'Taller de musicoterapia y expresión corporal en formato grupal.',
+    diasHorarios: 'Lunes de 15:30 a 16:30',
     terapeutas: [PROF.ponce], cupo: 10, activo: true, dows: [1], hora: '15:30', areaId: 'ARE-06',
-    objetivos: 'Estimular la expresión y la regulación emocional a través de la música, el ritmo y el movimiento. Favorecer la atención compartida y el disfrute grupal.',
+    objetivos: 'Estimular la expresión y la regulación emocional a través de la música y el ritmo.',
+    planTrabajo: 'Improvisación rítmica, canciones con movimiento y exploración sonora.',
+    materiales: 'Instrumentos de percusión, parlante, pañuelos.',
+    notasEvolucion: 'Buena adhesión. Se fortalece la atención compartida.',
     inscriptos: [1, 2, 3, 6, 8, 9, 11, 12],
     notas: [
       'Improvisación rítmica con instrumentos de percusión. {n} sostuvo el pulso junto al grupo durante toda la actividad.',
@@ -211,9 +262,14 @@ const TALLERES: TallerSeed[] = [
     ],
   },
   {
-    id: 'TAL-03', nombre: 'Taller de Vida Independiente (AVD)', diasHorarios: 'Miércoles de 10:00 a 12:00',
+    id: 'TAL-03', nombre: 'Taller de Vida Independiente (AVD)',
+    descripcion: 'Dispositivo de actividades de la vida diaria orientado a la autonomía.',
+    diasHorarios: 'Miércoles de 10:00 a 12:00',
     terapeutas: [PROF.aguirre, PROF.lucero], cupo: 6, activo: true, dows: [3], hora: '10:00', areaId: 'ARE-03',
-    objetivos: 'Desarrollar actividades de la vida diaria: preparación de colaciones, higiene, orden del espacio y manejo del dinero. Promover la mayor autonomía posible.',
+    objetivos: 'Desarrollar AVD: colaciones, higiene, orden del espacio y manejo del dinero.',
+    planTrabajo: 'Recetas simples, compra simulada y secuencias de cuidado personal.',
+    materiales: 'Utensilios de cocina, billetes didácticos, apoyos visuales.',
+    notasEvolucion: 'Grupo estable. Se avanza en independencia con supervisión a distancia.',
     inscriptos: [2, 4, 6, 9, 11, 13],
     notas: [
       'Se elaboró una receta simple (ensalada de frutas) siguiendo pasos con apoyo visual. {n} participó en el corte y el servido.',
@@ -222,9 +278,14 @@ const TALLERES: TallerSeed[] = [
     ],
   },
   {
-    id: 'TAL-04', nombre: 'Taller de Juego y Motricidad', diasHorarios: 'Viernes de 9:30 a 10:30',
+    id: 'TAL-04', nombre: 'Taller de Juego y Motricidad',
+    descripcion: 'Circuitos y juegos cooperativos para motricidad gruesa y planificación motora.',
+    diasHorarios: 'Viernes de 9:30 a 10:30',
     terapeutas: [PROF.medina], cupo: 8, activo: true, dows: [5], hora: '09:30', areaId: 'ARE-07',
-    objetivos: 'Mejorar la coordinación, el equilibrio y la planificación motora mediante circuitos y juegos cooperativos.',
+    objetivos: 'Mejorar coordinación, equilibrio y planificación motora.',
+    planTrabajo: 'Circuitos con obstáculos, juegos con pelota y ritmo corporal.',
+    materiales: 'Aros, pelotas, colchonetas, túnel.',
+    notasEvolucion: 'Participación activa. Se observa mejor coordinación óculo-manual.',
     inscriptos: [1, 2, 3, 6, 8, 12],
     notas: [
       'Circuito motor con obstáculos (túnel, aros, equilibrio). {n} completó el recorrido con apoyo mínimo.',
@@ -233,9 +294,14 @@ const TALLERES: TallerSeed[] = [
     ],
   },
   {
-    id: 'TAL-05', nombre: 'Taller de Lectoescritura Funcional', diasHorarios: 'Miércoles y viernes de 14:00 a 15:00',
+    id: 'TAL-05', nombre: 'Taller de Lectoescritura Funcional',
+    descripcion: 'Acercamiento a lectura y escritura en situaciones cotidianas.',
+    diasHorarios: 'Miércoles y viernes de 14:00 a 15:00',
     terapeutas: [PROF.lucero], cupo: 8, activo: false, dows: [3, 5], hora: '14:00', areaId: 'ARE-04',
-    objetivos: 'Acercar la lectura y la escritura a situaciones funcionales (carteles, listas, recetas, mensajes). Suspendido temporalmente por reorganización de espacios.',
+    objetivos: 'Lectura y escritura funcional (carteles, listas, recetas, mensajes).',
+    planTrabajo: 'Suspendido temporalmente por reorganización de espacios.',
+    materiales: 'Fichas, carteles, hojas de trabajo.',
+    notasEvolucion: 'Sin actividad vigente.',
     inscriptos: [5, 10], notas: [],
   },
 ];
@@ -306,15 +372,93 @@ function mulberry32(seed: number) {
 
 const pad3 = (n: number) => String(n).padStart(3, '0');
 
+function parseTutor(tutor: string): { nombre: string; vinculo: string } {
+  const m = /^(.+?)\s*\(([^)]+)\)\s*$/.exec(tutor);
+  return m ? { nombre: m[1].trim(), vinculo: m[2].trim() } : { nombre: tutor, vinculo: '' };
+}
+
 export function buildSeed(today = todayISO()): Database {
   const rand = mulberry32(2026);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
 
-  const pacientes: Paciente[] = PACIENTES.map(({ cudDias, plan: _plan, ...p }, i) => ({
-    ...p,
-    id: `PAC-${pad3(i + 1)}`,
-    vencimientoCUD: cudDias === null ? '' : addDays(today, cudDias),
-  }));
+  const pacientes: Paciente[] = PACIENTES.map((sp, i) => {
+    const ref = parseTutor(sp.tutor);
+    const vencimientoCUD = sp.cudDias === null ? '' : addDays(today, sp.cudDias);
+    return normalizePaciente({
+      id: `PAC-${pad3(i + 1)}`,
+      nombre: sp.nombre,
+      dni: sp.dni,
+      fechaNacimiento: sp.fechaNacimiento,
+      genero: sp.genero ?? '',
+      domicilio: sp.domicilio ?? 'Corrientes Capital',
+      conviveCon: ref.vinculo ? `Con ${ref.vinculo}` : '',
+      telefono: sp.telefono,
+      nacionalidad: 'Argentina',
+      estadoCivil: '',
+      escolaridad: '',
+      ocupacion: '',
+      estadoCUD: sp.cudDias === null ? 'En trámite' : 'Sí',
+      nroCUD: sp.nroCUD,
+      vencimientoCUD,
+      sube: sp.sube ?? 'No',
+      pension: sp.pension ?? 'No',
+      fotoNota: '',
+      referente: { nombre: ref.nombre, vinculo: ref.vinculo, telefono: sp.telefono, edad: '' },
+      contactoEmergencia: `${ref.nombre} · ${sp.telefono}`,
+      curador: '',
+      otrasInstituciones: '',
+      tipoCobertura: sp.tipoCobertura,
+      cobertura: sp.cobertura,
+      nroAfiliado: sp.nroAfiliado,
+      prestacionesAutorizadas: sp.tipoCobertura === 'Particular' ? '' : 'Centro de día jornada simple',
+      vencimientoAutorizacion: sp.cudDias === null ? '' : addDays(today, Math.max(30, (sp.cudDias ?? 90) - 30)),
+      fechaIngreso: addDays(today, -400 - i * 17),
+      diasAsistencia: sp.diasAsistencia ?? ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
+      estado: sp.estado,
+      motivoConsulta: 'Ingreso a centro de día / continuidad de apoyos',
+      derivacion: '',
+      diagnostico: sp.diagnostico,
+      diagnosticoAutor: '',
+      antecedentes: '',
+      profesionalesExternos: '',
+      condicionesMedicas: '',
+      consentimientoFirmado: true,
+    });
+  });
+
+  const medicaciones: Medicacion[] = [];
+  let medN = 1;
+  const pushMed = (pacienteId: string, data: Omit<Medicacion, 'id' | 'pacienteId' | 'historial'> & { historialDetalle?: string }) => {
+    const id = `MED-${String(medN++).padStart(4, '0')}`;
+    medicaciones.push({
+      id,
+      pacienteId,
+      droga: data.droga,
+      presentacion: data.presentacion,
+      concentracion: data.concentracion,
+      dosis: data.dosis,
+      horarios: data.horarios,
+      fechaInicio: data.fechaInicio,
+      observaciones: data.observaciones,
+      activo: data.activo,
+      historial: [{ id: `ADD-${id}-1`, fecha: data.fechaInicio, motivo: 'Alta', detalle: data.historialDetalle ?? 'Inicio de tratamiento' }],
+    });
+  };
+  pushMed(pacientes[0].id, {
+    droga: 'Risperidona', presentacion: 'Comprimido', concentracion: '1 mg',
+    dosis: '1 comprimido', horarios: 'Noche', fechaInicio: addDays(today, -200),
+    observaciones: 'Indicado por psiquiatra externo', activo: true,
+  });
+  pushMed(pacientes[10].id, {
+    droga: 'Ácido valproico', presentacion: 'Comprimido', concentracion: '500 mg',
+    dosis: '1 comprimido', horarios: 'Mañana y noche', fechaInicio: addDays(today, -500),
+    observaciones: 'Control periódico de niveles', activo: true,
+  });
+  pushMed(pacientes[1].id, {
+    droga: 'Baclofeno', presentacion: 'Comprimido', concentracion: '10 mg',
+    dosis: '1/2 comprimido', horarios: 'Mañana y tarde', fechaInicio: addDays(today, -120),
+    observaciones: '', activo: true,
+  });
 
   const talleres: Taller[] = TALLERES.map(({ dows: _d, hora: _h, areaId: _a, notas: _n, inscriptos, ...t }) => ({
     ...t,
@@ -339,12 +483,13 @@ export function buildSeed(today = todayISO()): Database {
           modalidad: 'Individual',
           nota: pick(NOTAS[item.areaId]).replace('{n}', paciente.nombre.split(' ')[0]),
           objetivos: pick(OBJETIVOS[item.areaId]),
+          addendas: [],
         });
       }
     });
 
     TALLERES.forEach((st, ti) => {
-      if (!st.activo || !st.dows.includes(dow) || skipIfFuture(st.hora)) return;
+      if (!st.activo || !st.dows.includes(dow) || skipIfFuture(st.hora) || st.notas.length === 0) return;
       for (const num of st.inscriptos) {
         if (rand() < 0.15) continue;
         const paciente = pacientes[num - 1];
@@ -354,6 +499,7 @@ export function buildSeed(today = todayISO()): Database {
           modalidad: 'Taller', tallerId: talleres[ti].id,
           nota: pick(st.notas).replace('{n}', paciente.nombre.split(' ')[0]),
           objetivos: pick(OBJETIVOS[st.areaId]),
+          addendas: [],
         });
       }
     });
@@ -398,7 +544,7 @@ export function buildSeed(today = todayISO()): Database {
     };
   });
 
-  return { pacientes, evoluciones, talleres, facturacion, areas: AREAS };
+  return { pacientes, evoluciones, talleres, facturacion, areas: AREAS, medicaciones };
 }
 
 export const SEED_DESCRIPTION = `Datos ficticios de ejemplo (${formatPeriod(shiftPeriod(todayISO().slice(0, 7), -2))} a hoy).`;

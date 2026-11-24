@@ -19,7 +19,6 @@ export default function EvolucionesPage() {
   const { toast, toastError, confirm } = useFeedback();
   const [params, setParams] = useSearchParams();
   const [nueva, setNueva] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
   const [areasOpen, setAreasOpen] = useState(false);
 
   const q = params.get('q') ?? '';
@@ -64,8 +63,6 @@ export default function EvolucionesPage() {
       );
     });
   }, [db, q, pacienteId, areaId, profesional, modalidad, periodo]);
-
-  const editEvo = editId ? db.evoluciones.find((e) => e.id === editId) : undefined;
 
   const remove = async (id: string) => {
     const ok = await confirm({ title: 'Eliminar evolución', message: '¿Eliminar esta nota de sesión?', confirmLabel: 'Eliminar' });
@@ -138,13 +135,12 @@ export default function EvolucionesPage() {
           </Card>
         ) : (
           list.map((e) => (
-            <EvolucionItem key={e.id} evolucion={e} onEdit={() => setEditId(e.id)} onDelete={() => remove(e.id)} />
+            <EvolucionItem key={e.id} evolucion={e} onDelete={() => remove(e.id)} />
           ))
         )}
       </div>
 
       <EvolucionFormModal open={nueva} onClose={() => setNueva(false)} defaultPacienteId={pacienteId || undefined} />
-      <EvolucionFormModal open={!!editEvo} onClose={() => setEditId(null)} evolucion={editEvo} />
       <AreasModal open={areasOpen} onClose={() => setAreasOpen(false)} />
     </>
   );

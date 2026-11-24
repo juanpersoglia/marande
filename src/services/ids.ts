@@ -15,6 +15,8 @@ export const nextPacienteId = (ids: string[]) => `PAC-${pad(nextNumber(ids, /^PA
 export const nextTallerId = (ids: string[]) => `TAL-${pad(nextNumber(ids, /^TAL-(\d+)$/), 2)}`;
 export const nextEvolucionId = (ids: string[]) => `EVO-${pad(nextNumber(ids, /^EVO-(\d+)$/), 4)}`;
 export const nextAreaId = (ids: string[]) => `ARE-${pad(nextNumber(ids, /^ARE-(\d+)$/), 2)}`;
+export const nextMedicacionId = (ids: string[]) => `MED-${pad(nextNumber(ids, /^MED-(\d+)$/), 4)}`;
+export const nextAddendaId = (ids: string[]) => `ADD-${pad(nextNumber(ids, /^ADD-(\d+)$/), 4)}`;
 
 /** FAC-AAAA-NNN: la secuencia reinicia cada año según el período facturado. */
 export function nextFacturacionId(ids: string[], periodo: string): string {

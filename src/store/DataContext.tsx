@@ -1,15 +1,29 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { normalizeDatabase, normalizeEvolucion, normalizeMedicacion, normalizePaciente, normalizeTaller } from '@/data/normalize';
 import { buildSeed } from '@/data/seed';
 import { createRepositories, type Repositories } from '@/data/repositories';
-import { nextAreaId, nextEvolucionId, nextFacturacionId, nextFacturacionIds, nextPacienteId, nextTallerId } from '@/services/ids';
+import {
+  nextAddendaId,
+  nextAreaId,
+  nextEvolucionId,
+  nextFacturacionId,
+  nextFacturacionIds,
+  nextMedicacionId,
+  nextPacienteId,
+  nextTallerId,
+} from '@/services/ids';
+import { nowTime, todayISO } from '@/lib/format';
 import {
   COLLECTION_KEYS,
   type Area,
   type CollectionKey,
   type Database,
   type Evolucion,
+  type EvolucionAddenda,
   type EstadoPresentacion,
   type Facturacion,
+  type Medicacion,
+  type MotivoMedicacion,
   type Paciente,
   type Taller,
 } from '@/types';
@@ -31,9 +45,12 @@ interface DataContextValue {
   savePaciente: (p: WithOptionalId<Paciente>) => Promise<Paciente>;
   deletePaciente: (id: string) => Promise<void>;
   saveEvolucion: (e: WithOptionalId<Evolucion>) => Promise<Evolucion>;
+  addEvolucionAddenda: (evolucionId: string, texto: string, profesional: string) => Promise<Evolucion>;
   deleteEvolucion: (id: string) => Promise<void>;
   saveTaller: (t: WithOptionalId<Taller>) => Promise<Taller>;
   deleteTaller: (id: string) => Promise<void>;
+  saveMedicacion: (m: WithOptionalId<Medicacion>, historialMotivo?: MotivoMedicacion, historialDetalle?: string) => Promise<Medicacion>;
+  deleteMedicacion: (id: string) => Promise<void>;
   saveFacturacion: (f: WithOptionalId<Facturacion>) => Promise<Facturacion>;
   saveFacturaciones: (items: Omit<Facturacion, 'id' | 'estado'>[], estado?: EstadoPresentacion) => Promise<number>;
   setEstadoFacturacion: (ids: string[], estado: EstadoPresentacion) => Promise<void>;
@@ -46,7 +63,7 @@ interface DataContextValue {
   clearAllData: () => Promise<void>;
 }
 
-const emptyDb: Database = { pacientes: [], evoluciones: [], talleres: [], facturacion: [], areas: [] };
+const emptyDb: Database = { pacientes: [], evoluciones: [], talleres: [], facturacion: [], areas: [], medicaciones: [] };
 
 const DataContext = createContext<DataContextValue | null>(null);
 
@@ -65,21 +82,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const loadAll = useCallback(async (): Promise<Database> => {
     const entries = await Promise.all(COLLECTION_KEYS.map(async (k) => [k, await repos[k].list()] as const));
-    return Object.fromEntries(entries) as unknown as Database;
+    return normalizeDatabase(Object.fromEntries(entries) as unknown as Database);
   }, [repos]);
 
   const replaceCollections = useCallback(
     async (data: Partial<Database>) => {
+      const normalized = normalizeDatabase({ ...dbRef.current, ...data });
       for (const key of COLLECTION_KEYS) {
         const items = data[key];
-        if (items) await (repos[key] as { replaceAll(i: unknown[]): Promise<void> }).replaceAll(items);
+        if (items) await (repos[key] as { replaceAll(i: unknown[]): Promise<void> }).replaceAll(normalized[key]);
       }
-      commit({ ...dbRef.current, ...data });
+      commit({ ...dbRef.current, ...Object.fromEntries(COLLECTION_KEYS.filter((k) => data[k]).map((k) => [k, normalized[k]])) });
     },
     [repos, commit],
   );
 
-  // Arranque: siembra datos de ejemplo la primera vez y carga las colecciones.
   useEffect(() => {
     if (booted.current) return;
     booted.current = true;
@@ -92,7 +109,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
           }
           await repos.markInitialized();
         }
-        commit(await loadAll());
+        const loaded = await loadAll();
+        // Persistir migración de esquema (campos nuevos / medicaciones).
+        for (const key of COLLECTION_KEYS) {
+          await (repos[key] as { replaceAll(i: unknown[]): Promise<void> }).replaceAll(loaded[key]);
+        }
+        // Si no hay áreas institucionales nuevas, sumarlas sin borrar las existentes.
+        const seedAreas = buildSeed().areas;
+        const missing = seedAreas.filter((a) => !loaded.areas.some((x) => x.id === a.id || x.nombre === a.nombre));
+        if (missing.length) {
+          const areas = [...loaded.areas, ...missing];
+          await (repos.areas as { replaceAll(i: unknown[]): Promise<void> }).replaceAll(areas);
+          loaded.areas = areas;
+        }
+        commit(loaded);
         setStatus('ready');
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
@@ -101,7 +131,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     })();
   }, [repos, commit, loadAll]);
 
-  // ----- Primitivas genéricas -----
   const upsert = useCallback(
     async <K extends CollectionKey>(key: K, item: Database[K][number]) => {
       await (repos[key] as { upsert(i: unknown): Promise<unknown> }).upsert(item);
@@ -124,11 +153,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [repos, commit],
   );
 
-  // ----- Acciones por entidad -----
   const savePaciente: DataContextValue['savePaciente'] = useCallback(
     (p) => {
       const id = p.id ?? nextPacienteId(dbRef.current.pacientes.map((x) => x.id));
-      return upsert('pacientes', { ...p, id });
+      return upsert('pacientes', normalizePaciente({ ...p, id }));
     },
     [upsert],
   );
@@ -140,6 +168,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         pacientes: cur.pacientes.filter((p) => p.id !== id),
         evoluciones: cur.evoluciones.filter((e) => e.pacienteId !== id),
         facturacion: cur.facturacion.filter((f) => f.pacienteId !== id),
+        medicaciones: cur.medicaciones.filter((m) => m.pacienteId !== id),
         talleres: cur.talleres.map((t) => (t.inscriptos.includes(id) ? { ...t, inscriptos: t.inscriptos.filter((x) => x !== id) } : t)),
       });
     },
@@ -149,7 +178,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const saveEvolucion: DataContextValue['saveEvolucion'] = useCallback(
     (e) => {
       const id = e.id ?? nextEvolucionId(dbRef.current.evoluciones.map((x) => x.id));
-      return upsert('evoluciones', { ...e, id });
+      const existing = e.id ? dbRef.current.evoluciones.find((x) => x.id === e.id) : undefined;
+      // Si ya existía, preservar nota/objetivos/fecha originales y addendas (solo se editan campos menores vía addenda).
+      const normalized = normalizeEvolucion({
+        ...e,
+        id,
+        addendas: existing?.addendas ?? e.addendas ?? [],
+        nota: existing?.nota ?? e.nota,
+        objetivos: existing ? existing.objetivos : e.objetivos,
+        fecha: existing?.fecha ?? e.fecha,
+        hora: existing?.hora ?? e.hora,
+      });
+      return upsert('evoluciones', normalized);
+    },
+    [upsert],
+  );
+
+  const addEvolucionAddenda: DataContextValue['addEvolucionAddenda'] = useCallback(
+    async (evolucionId, texto, profesional) => {
+      const evo = dbRef.current.evoluciones.find((e) => e.id === evolucionId);
+      if (!evo) throw new Error('No se encontró la evolución.');
+      const ids = evo.addendas.map((a) => a.id);
+      const addenda: EvolucionAddenda = {
+        id: nextAddendaId(ids),
+        fecha: todayISO(),
+        hora: nowTime(),
+        profesional: profesional.trim(),
+        texto: texto.trim(),
+      };
+      return upsert('evoluciones', { ...evo, addendas: [...evo.addendas, addenda] });
     },
     [upsert],
   );
@@ -157,7 +214,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const saveTaller: DataContextValue['saveTaller'] = useCallback(
     (t) => {
       const id = t.id ?? nextTallerId(dbRef.current.talleres.map((x) => x.id));
-      return upsert('talleres', { ...t, id });
+      return upsert('talleres', normalizeTaller({ ...t, id }));
     },
     [upsert],
   );
@@ -171,6 +228,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
     },
     [replaceCollections],
+  );
+
+  const saveMedicacion: DataContextValue['saveMedicacion'] = useCallback(
+    async (m, historialMotivo = 'Alta', historialDetalle = '') => {
+      const id = m.id ?? nextMedicacionId(dbRef.current.medicaciones.map((x) => x.id));
+      const existing = m.id ? dbRef.current.medicaciones.find((x) => x.id === m.id) : undefined;
+      const base = normalizeMedicacion({ ...m, id, historial: existing?.historial ?? m.historial ?? [] });
+      if (!existing) {
+        base.historial = [
+          {
+            id: nextAddendaId([]),
+            fecha: todayISO(),
+            motivo: 'Alta',
+            detalle: historialDetalle || 'Inicio de la medicación',
+          },
+        ];
+      } else if (historialMotivo !== 'Alta' || historialDetalle) {
+        base.historial = [
+          ...base.historial,
+          {
+            id: nextAddendaId(base.historial.map((h) => h.id)),
+            fecha: todayISO(),
+            motivo: historialMotivo,
+            detalle: historialDetalle || historialMotivo,
+          },
+        ];
+      }
+      return upsert('medicaciones', base);
+    },
+    [upsert],
   );
 
   const saveFacturacion: DataContextValue['saveFacturacion'] = useCallback(
@@ -225,7 +312,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [remove],
   );
 
-  // ----- Importación / respaldo -----
   const importDatabase: DataContextValue['importDatabase'] = useCallback(
     async (data, mode) => {
       const summary: ImportSummary = {};
@@ -256,7 +342,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await replaceCollections({ ...emptyDb, areas: dbRef.current.areas });
   }, [replaceCollections]);
 
-  // ----- Índices de consulta -----
   const indexes = useMemo(() => {
     const pacientes = new Map(db.pacientes.map((p) => [p.id, p]));
     const areas = new Map(db.areas.map((a) => [a.id, a]));
@@ -276,9 +361,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       savePaciente,
       deletePaciente,
       saveEvolucion,
+      addEvolucionAddenda,
       deleteEvolucion: (id) => remove('evoluciones', id),
       saveTaller,
       deleteTaller,
+      saveMedicacion,
+      deleteMedicacion: (id) => remove('medicaciones', id),
       saveFacturacion,
       saveFacturaciones,
       setEstadoFacturacion,
@@ -290,8 +378,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       clearAllData,
     }),
     [
-      status, error, repos, db, indexes, savePaciente, deletePaciente, saveEvolucion, remove, saveTaller, deleteTaller,
-      saveFacturacion, saveFacturaciones, setEstadoFacturacion, saveArea, deleteArea, importDatabase, restoreDemoData, clearAllData,
+      status, error, repos, db, indexes, savePaciente, deletePaciente, saveEvolucion, addEvolucionAddenda, remove,
+      saveTaller, deleteTaller, saveMedicacion, saveFacturacion, saveFacturaciones, setEstadoFacturacion,
+      saveArea, deleteArea, importDatabase, restoreDemoData, clearAllData,
     ],
   );
 

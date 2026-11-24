@@ -101,8 +101,12 @@ export interface CudEstado {
 export const CUD_AVISO_DIAS = 90;
 export const CUD_CRITICO_DIAS = 30;
 
-export function estadoCUD(p: Pick<Paciente, 'vencimientoCUD' | 'nroCUD'>): CudEstado {
-  if (!p.vencimientoCUD) return { nivel: 'sin-datos', texto: p.nroCUD ? 'Sin fecha' : 'En trámite / sin CUD' };
+export function estadoCUD(p: Pick<Paciente, 'vencimientoCUD' | 'nroCUD' | 'estadoCUD'>): CudEstado {
+  if (p.estadoCUD === 'No') return { nivel: 'sin-datos', texto: 'Sin CUD' };
+  if (p.estadoCUD === 'En trámite' || (!p.vencimientoCUD && !p.nroCUD)) {
+    return { nivel: 'sin-datos', texto: p.estadoCUD === 'En trámite' || !p.nroCUD ? 'CUD en trámite' : 'Sin fecha' };
+  }
+  if (!p.vencimientoCUD) return { nivel: 'sin-datos', texto: p.nroCUD ? 'Sin fecha de vencimiento' : 'CUD en trámite' };
   const dias = daysUntil(p.vencimientoCUD);
   if (dias < 0) return { nivel: 'vencido', dias, texto: `Vencido hace ${-dias} ${dias === -1 ? 'día' : 'días'}` };
   if (dias === 0) return { nivel: 'critico', dias, texto: 'Vence hoy' };
@@ -112,8 +116,10 @@ export function estadoCUD(p: Pick<Paciente, 'vencimientoCUD' | 'nroCUD'>): CudEs
 }
 
 export const cudRequiereAtencion = (p: Paciente) => {
+  if (p.estado !== 'Activo') return false;
+  if (p.estadoCUD === 'En trámite') return true;
   const n = estadoCUD(p).nivel;
-  return p.estado === 'Activo' && (n === 'vencido' || n === 'critico' || n === 'por-vencer');
+  return n === 'vencido' || n === 'critico' || n === 'por-vencer';
 };
 
 // ---------- Talleres ----------

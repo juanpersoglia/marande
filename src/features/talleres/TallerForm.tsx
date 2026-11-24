@@ -30,7 +30,10 @@ function TallerFormInner({ onClose, taller, onSaved }: Props) {
 
   const [form, setForm] = useState<FormState>(() => {
     if (!taller) {
-      return { nombre: '', diasHorarios: '', terapeutas: [], cupo: 8, inscriptos: [], objetivos: '', activo: true };
+      return {
+        nombre: '', descripcion: '', diasHorarios: '', terapeutas: [], cupo: 8, inscriptos: [],
+        objetivos: '', planTrabajo: '', materiales: '', notasEvolucion: '', activo: true,
+      };
     }
     const { id: _id, ...rest } = taller;
     return rest;
@@ -111,6 +114,9 @@ function TallerFormInner({ onClose, taller, onSaved }: Props) {
         <Field label="Nombre del taller" required error={errors.nombre} className="sm:col-span-2">
           {(id) => <Input id={id} value={form.nombre} onChange={(e) => set('nombre', e.target.value)} invalid={!!errors.nombre} autoFocus placeholder="Ej.: Taller de comunicación" />}
         </Field>
+        <Field label="Descripción" className="sm:col-span-2">
+          {(id) => <Textarea id={id} rows={2} value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} placeholder="Breve descripción del dispositivo grupal" />}
+        </Field>
         <Field label="Días y horarios" required error={errors.diasHorarios} className="sm:col-span-2">
           {(id) => <Input id={id} value={form.diasHorarios} onChange={(e) => set('diasHorarios', e.target.value)} invalid={!!errors.diasHorarios} placeholder="Ej.: Martes y jueves 10:00–11:30" />}
         </Field>
@@ -127,7 +133,7 @@ function TallerFormInner({ onClose, taller, onSaved }: Props) {
         </Field>
 
         <div className="sm:col-span-2">
-          <p className="mb-1 text-sm font-medium text-slate-700">Terapeutas a cargo</p>
+          <p className="mb-1 text-sm font-medium text-slate-700">Coordinación / terapeutas a cargo</p>
           <div className="flex gap-2">
             <Input
               list="terapeutas-sugeridos"
@@ -177,7 +183,16 @@ function TallerFormInner({ onClose, taller, onSaved }: Props) {
         </div>
 
         <Field label="Objetivos del taller" className="sm:col-span-2">
-          {(id) => <Textarea id={id} rows={3} value={form.objetivos} onChange={(e) => set('objetivos', e.target.value)} placeholder="Objetivos terapéuticos y comunitarios del dispositivo." />}
+          {(id) => <Textarea id={id} rows={2} value={form.objetivos} onChange={(e) => set('objetivos', e.target.value)} placeholder="Objetivos terapéuticos y comunitarios." />}
+        </Field>
+        <Field label="Plan de trabajo" className="sm:col-span-2">
+          {(id) => <Textarea id={id} rows={2} value={form.planTrabajo} onChange={(e) => set('planTrabajo', e.target.value)} />}
+        </Field>
+        <Field label="Materiales" className="sm:col-span-2">
+          {(id) => <Textarea id={id} rows={2} value={form.materiales} onChange={(e) => set('materiales', e.target.value)} />}
+        </Field>
+        <Field label="Evolución del taller" className="sm:col-span-2">
+          {(id) => <Textarea id={id} rows={2} value={form.notasEvolucion} onChange={(e) => set('notasEvolucion', e.target.value)} placeholder="Notas generales del grupo (no reemplaza las evoluciones individuales)." />}
         </Field>
       </form>
     </Modal>

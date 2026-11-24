@@ -8,7 +8,7 @@ import { formatAge, formatDNI, initials, normalizeText } from '@/lib/format';
 import { cudRequiereAtencion } from '@/services/domain';
 import { coberturasDisponibles } from '@/services/queries';
 import { useData } from '@/store/DataContext';
-import { TIPOS_COBERTURA, type EstadoPaciente, type TipoCobertura } from '@/types';
+import { ESTADOS_PACIENTE, TIPOS_COBERTURA, type EstadoPaciente, type TipoCobertura } from '@/types';
 
 type EstadoFilter = 'Todos' | EstadoPaciente;
 type TipoFilter = 'Todos' | TipoCobertura;
@@ -67,8 +67,7 @@ export default function PacientesPage() {
           <SearchInput className="md:col-span-2 xl:col-span-2" value={q} onChange={(v) => set('q', v)} placeholder="Buscar por nombre, DNI, diagnóstico o ID..." />
           <Select value={estado} onChange={(e) => set('estado', e.target.value)} aria-label="Estado">
             <option value="Todos">Todos los estados</option>
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
+            {ESTADOS_PACIENTE.map((s) => <option key={s} value={s}>{s}</option>)}
           </Select>
           <Select value={tipo} onChange={(e) => set('tipo', e.target.value)} aria-label="Tipo de cobertura">
             <option value="Todos">Todas las modalidades</option>

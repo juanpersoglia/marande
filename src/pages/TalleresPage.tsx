@@ -91,6 +91,7 @@ export default function TalleresPage() {
                       {o.completo && <Badge tone="warning">Cupo completo</Badge>}
                     </div>
                     <p className="mt-0.5 text-sm text-slate-500">{t.id} · {t.diasHorarios}</p>
+                    {t.descripcion && <p className="mt-1 text-sm text-slate-600">{t.descripcion}</p>}
                   </div>
                   <div className="flex gap-0.5">
                     <IconButton label="Editar taller" onClick={() => setEdit(t)}><Pencil className="size-4" /></IconButton>
@@ -108,7 +109,7 @@ export default function TalleresPage() {
                   </div>
 
                   <div>
-                    <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Terapeutas a cargo</p>
+                    <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Coordinación</p>
                     <p className="mt-1 text-sm text-slate-700">{t.terapeutas.length ? t.terapeutas.join(' · ') : 'Sin asignar'}</p>
                   </div>
 
@@ -116,6 +117,18 @@ export default function TalleresPage() {
                     <div>
                       <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Objetivos</p>
                       <p className="mt-1 text-sm leading-relaxed text-slate-700">{t.objetivos}</p>
+                    </div>
+                  )}
+                  {t.planTrabajo && (
+                    <div>
+                      <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Plan de trabajo</p>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-700">{t.planTrabajo}</p>
+                    </div>
+                  )}
+                  {t.materiales && (
+                    <div>
+                      <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Materiales</p>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-700">{t.materiales}</p>
                     </div>
                   )}
 

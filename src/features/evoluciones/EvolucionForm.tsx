@@ -33,11 +33,11 @@ function EvolucionFormInner({ onClose, evolucion, defaultPacienteId, onSaved }: 
   const [form, setForm] = useState<FormState>(() => {
     if (evolucion) {
       const { id: _id, ...rest } = evolucion;
-      return rest;
+      return { ...rest, addendas: rest.addendas ?? [] };
     }
     return {
       fecha: todayISO(), hora: nowTime(), pacienteId: defaultPacienteId ?? '', areaId: db.areas[0]?.id ?? '',
-      profesional: '', modalidad: 'Individual', tallerId: undefined, nota: '', objetivos: '',
+      profesional: '', modalidad: 'Individual', tallerId: undefined, nota: '', objetivos: '', addendas: [],
     };
   });
 
@@ -101,17 +101,18 @@ function EvolucionFormInner({ onClose, evolucion, defaultPacienteId, onSaved }: 
         open
         onClose={() => !areasOpen && onClose()}
         size="lg"
-        title={evolucion ? `Editar evolución · ${evolucion.id}` : 'Nueva evolución'}
-        description="Registro clínico de la sesión."
+        title={evolucion ? `Evolución · ${evolucion.id}` : 'Nueva evolución'}
+        description={evolucion ? 'Las evoluciones guardadas no se modifican: usá una adenda desde el historial.' : 'Registro clínico fechado y firmado por el profesional.'}
         footer={
           <>
             <Button variant="secondary" onClick={onClose}>Cancelar</Button>
             {!evolucion && <Button variant="soft" onClick={() => save(true)} disabled={saving}>Guardar y cargar otra</Button>}
-            <Button type="submit" form="evolucion-form" disabled={saving}>{saving ? 'Guardando...' : 'Guardar evolución'}</Button>
+            {!evolucion && <Button type="submit" form="evolucion-form" disabled={saving}>{saving ? 'Guardando...' : 'Guardar evolución'}</Button>}
+            {evolucion && <Button onClick={onClose}>Cerrar</Button>}
           </>
         }
       >
-        <form id="evolucion-form" onSubmit={submit} className="grid gap-4 sm:grid-cols-6" noValidate>
+        <form id="evolucion-form" onSubmit={submit} className="grid gap-4 sm:grid-cols-6" noValidate style={evolucion ? { pointerEvents: 'none', opacity: 0.85 } : undefined}>
           <Field label="Fecha" required error={errors.fecha} className="sm:col-span-3">
             {(id) => <Input id={id} type="date" value={form.fecha} onChange={(e) => set('fecha', e.target.value)} invalid={!!errors.fecha} />}
           </Field>

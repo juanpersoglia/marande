@@ -162,6 +162,7 @@ export default function DatosPage() {
           <li>{db.evoluciones.length} evoluciones</li>
           <li>{db.talleres.length} talleres</li>
           <li>{db.facturacion.length} facturación</li>
+          <li>{db.medicaciones.length} medicaciones</li>
           <li>{db.areas.length} áreas</li>
         </ul>
       </div>

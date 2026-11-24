@@ -2,6 +2,7 @@ import { parseCSV, toCSV } from '@/lib/csv';
 import { formatAge, formatDate, normalizeText } from '@/lib/format';
 import { nextAreaId } from '@/services/ids';
 import { totalFacturar } from '@/services/domain';
+import { normalizeMedicacion, normalizePaciente, normalizeTaller } from '@/data/normalize';
 import {
   COLLECTION_KEYS,
   ESTADOS_PRESENTACION,
@@ -11,9 +12,9 @@ import {
   type EstadoPresentacion,
   type Evolucion,
   type Facturacion,
+  type Medicacion,
   type Modalidad,
   type Paciente,
-  type Taller,
   type TipoCobertura,
 } from '@/types';
 import { tipoDeCobertura } from '@/data/catalogs';
@@ -66,6 +67,7 @@ export const CSV_LABELS: Record<CollectionKey, string> = {
   talleres: 'Talleres',
   facturacion: 'Facturación',
   areas: 'Áreas',
+  medicaciones: 'Medicaciones',
 };
 
 const LIST_SEP = ' | ';
@@ -77,8 +79,22 @@ export function exportCollectionCSV(key: CollectionKey, db: Database, subset?: {
   switch (key) {
     case 'pacientes':
       return toCSV(
-        ['ID Paciente', 'Nombre y Apellido', 'DNI', 'Fecha de Nacimiento', 'Edad', 'Diagnóstico Principal', 'Nro CUD', 'Vencimiento CUD', 'Tipo de Cobertura', 'Cobertura / Obra Social', 'Nro Afiliado', 'Tutor / Familiar Responsable', 'Teléfono', 'Estado'],
-        db.pacientes.map((p) => [p.id, p.nombre, p.dni, formatDateCsv(p.fechaNacimiento), formatAge(p.fechaNacimiento), p.diagnostico, p.nroCUD, formatDateCsv(p.vencimientoCUD), p.tipoCobertura, p.cobertura, p.nroAfiliado, p.tutor, p.telefono, p.estado]),
+        [
+          'ID Paciente', 'Nombre y Apellido', 'DNI', 'Fecha de Nacimiento', 'Edad', 'Género', 'Domicilio', 'Convive con', 'Teléfono',
+          'Nacionalidad', 'Estado civil', 'Escolaridad', 'Ocupación',
+          'Estado CUD', 'Nro CUD', 'Vencimiento CUD', 'SUBE', 'Pensión',
+          'Referente', 'Vínculo referente', 'Tel. referente', 'Edad referente', 'Contacto emergencia', 'Curador', 'Otras instituciones',
+          'Tipo de Cobertura', 'Cobertura / Obra Social', 'Nro Afiliado', 'Prestaciones autorizadas', 'Venc. autorización', 'Fecha ingreso', 'Días asistencia', 'Estado',
+          'Motivo consulta', 'Derivación', 'Diagnóstico', 'Autor diagnóstico', 'Antecedentes', 'Prof. externos', 'Condiciones médicas', 'Consentimiento firmado',
+        ],
+        db.pacientes.map((p) => [
+          p.id, p.nombre, p.dni, formatDateCsv(p.fechaNacimiento), formatAge(p.fechaNacimiento), p.genero, p.domicilio, p.conviveCon, p.telefono,
+          p.nacionalidad, p.estadoCivil, p.escolaridad, p.ocupacion,
+          p.estadoCUD, p.nroCUD, formatDateCsv(p.vencimientoCUD), p.sube, p.pension,
+          p.referente.nombre, p.referente.vinculo, p.referente.telefono, p.referente.edad, p.contactoEmergencia, p.curador, p.otrasInstituciones,
+          p.tipoCobertura, p.cobertura, p.nroAfiliado, p.prestacionesAutorizadas, formatDateCsv(p.vencimientoAutorizacion), formatDateCsv(p.fechaIngreso), p.diasAsistencia.join(LIST_SEP), p.estado,
+          p.motivoConsulta, p.derivacion, p.diagnostico, p.diagnosticoAutor, p.antecedentes, p.profesionalesExternos, p.condicionesMedicas, p.consentimientoFirmado ? 'Sí' : 'No',
+        ]),
       );
     case 'evoluciones':
       return toCSV(
@@ -87,8 +103,8 @@ export function exportCollectionCSV(key: CollectionKey, db: Database, subset?: {
       );
     case 'talleres':
       return toCSV(
-        ['ID Taller', 'Nombre del Taller', 'Días y Horarios', 'Terapeutas a Cargo', 'Cupo Máximo', 'Pacientes Inscriptos (IDs)', 'Objetivos del Taller', 'Activo'],
-        db.talleres.map((t) => [t.id, t.nombre, t.diasHorarios, t.terapeutas.join(LIST_SEP), t.cupo, t.inscriptos.join(LIST_SEP), t.objetivos, t.activo ? 'Sí' : 'No']),
+        ['ID Taller', 'Nombre del Taller', 'Descripción', 'Días y Horarios', 'Coordinación', 'Cupo Máximo', 'Pacientes Inscriptos (IDs)', 'Objetivos', 'Plan de trabajo', 'Materiales', 'Evolución taller', 'Activo'],
+        db.talleres.map((t) => [t.id, t.nombre, t.descripcion, t.diasHorarios, t.terapeutas.join(LIST_SEP), t.cupo, t.inscriptos.join(LIST_SEP), t.objetivos, t.planTrabajo, t.materiales, t.notasEvolucion, t.activo ? 'Sí' : 'No']),
       );
     case 'facturacion':
       return toCSV(
@@ -97,6 +113,11 @@ export function exportCollectionCSV(key: CollectionKey, db: Database, subset?: {
       );
     case 'areas':
       return toCSV(['ID Área', 'Nombre'], db.areas.map((a) => [a.id, a.nombre]));
+    case 'medicaciones':
+      return toCSV(
+        ['ID', 'ID Paciente', 'Paciente', 'Droga', 'Presentación', 'Concentración', 'Dosis', 'Horarios', 'Fecha inicio', 'Observaciones', 'Activa'],
+        db.medicaciones.map((m) => [m.id, m.pacienteId, pacienteNombre(m.pacienteId), m.droga, m.presentacion, m.concentracion, m.dosis, m.horarios, formatDateCsv(m.fechaInicio), m.observaciones, m.activo ? 'Sí' : 'No']),
+      );
   }
 }
 
@@ -141,21 +162,54 @@ export function importCollectionCSV(key: CollectionKey, text: string, db: Databa
           const vencimiento = parseDateLoose(rec('Vencimiento CUD', 'Vencimiento'));
           if (nacimiento === null || vencimiento === null) return fail('fecha inválida (usá dd/mm/aaaa o aaaa-mm-dd).');
           const estadoRaw = normalizeText(rec('Estado'));
-          const item: Paciente = {
+          const estadoCudRaw = normalizeText(rec('Estado CUD'));
+          const tramite = (raw: string) => (raw.includes('tramite') ? 'En trámite' as const : raw === 'si' || raw === 'sí' ? 'Sí' as const : raw === 'no' ? 'No' as const : undefined);
+          const tutor = rec('Tutor / Familiar Responsable', 'Tutor', 'Referente');
+          const item = normalizePaciente({
             id: rec('ID Paciente', 'ID') || '',
             nombre,
             dni: rec('DNI').replace(/\D/g, ''),
             fechaNacimiento: nacimiento,
-            diagnostico: rec('Diagnóstico Principal', 'Diagnóstico', 'Diagnostico'),
+            genero: rec('Género', 'Genero'),
+            domicilio: rec('Domicilio'),
+            conviveCon: rec('Convive con'),
+            telefono: rec('Teléfono', 'Telefono'),
+            nacionalidad: rec('Nacionalidad') || 'Argentina',
+            estadoCivil: rec('Estado civil'),
+            escolaridad: rec('Escolaridad'),
+            ocupacion: rec('Ocupación', 'Ocupacion'),
+            estadoCUD: tramite(estadoCudRaw) ?? (rec('Nro CUD', 'CUD') ? 'Sí' : 'En trámite'),
             nroCUD: rec('Nro CUD', 'CUD'),
             vencimientoCUD: vencimiento,
+            sube: tramite(normalizeText(rec('SUBE'))) ?? 'No',
+            pension: tramite(normalizeText(rec('Pensión', 'Pension'))) ?? 'No',
+            referente: {
+              nombre: rec('Referente') || tutor,
+              vinculo: rec('Vínculo referente', 'Vinculo referente'),
+              telefono: rec('Tel. referente', 'Tel referente') || rec('Teléfono', 'Telefono'),
+              edad: rec('Edad referente'),
+            },
+            contactoEmergencia: rec('Contacto emergencia'),
+            curador: rec('Curador'),
+            otrasInstituciones: rec('Otras instituciones'),
             tipoCobertura: tipo,
             cobertura,
             nroAfiliado: rec('Nro Afiliado', 'Afiliado') || (tipo === 'Particular' ? 'Particular' : ''),
-            tutor: rec('Tutor / Familiar Responsable', 'Tutor'),
-            telefono: rec('Teléfono', 'Telefono'),
-            estado: estadoRaw === 'inactivo' ? 'Inactivo' : 'Activo',
-          };
+            prestacionesAutorizadas: rec('Prestaciones autorizadas'),
+            vencimientoAutorizacion: parseDateLoose(rec('Venc. autorización', 'Venc autorizacion')) || '',
+            fechaIngreso: parseDateLoose(rec('Fecha ingreso')) || '',
+            diasAsistencia: splitList(rec('Días asistencia', 'Dias asistencia')) as Paciente['diasAsistencia'],
+            estado: estadoRaw === 'inactivo' ? 'Inactivo' : estadoRaw === 'otros' ? 'Otros' : 'Activo',
+            motivoConsulta: rec('Motivo consulta'),
+            derivacion: rec('Derivación', 'Derivacion'),
+            diagnostico: rec('Diagnóstico Principal', 'Diagnóstico', 'Diagnostico'),
+            diagnosticoAutor: rec('Autor diagnóstico', 'Autor diagnostico'),
+            antecedentes: rec('Antecedentes'),
+            profesionalesExternos: rec('Prof. externos', 'Prof externos'),
+            condicionesMedicas: rec('Condiciones médicas', 'Condiciones medicas'),
+            consentimientoFirmado: ['si', 'sí', 'true', '1'].includes(normalizeText(rec('Consentimiento firmado'))),
+            tutor,
+          });
           result.items.push(item);
           break;
         }
@@ -184,6 +238,7 @@ export function importCollectionCSV(key: CollectionKey, text: string, db: Databa
             tallerId: rec('ID Taller') || undefined,
             nota: rec('Evolución / Nota de Sesión', 'Evolución', 'Evolucion', 'Nota'),
             objetivos: rec('Objetivos Trabajados', 'Objetivos'),
+            addendas: [],
           };
           result.items.push(item);
           break;
@@ -193,16 +248,43 @@ export function importCollectionCSV(key: CollectionKey, text: string, db: Databa
           if (!nombre) return fail('falta el nombre del taller.');
           const cupo = parseNumber(rec('Cupo Máximo', 'Cupo'));
           if (cupo === null || cupo < 1) return fail('cupo inválido.');
-          const item: Taller = {
+          const item = normalizeTaller({
             id: rec('ID Taller', 'ID') || '',
             nombre,
+            descripcion: rec('Descripción', 'Descripcion'),
             diasHorarios: rec('Días y Horarios', 'Dias y Horarios'),
-            terapeutas: splitList(rec('Terapeutas a Cargo', 'Terapeutas')),
+            terapeutas: splitList(rec('Coordinación', 'Terapeutas a Cargo', 'Terapeutas')),
             cupo,
             inscriptos: splitList(rec('Pacientes Inscriptos (IDs)', 'Pacientes Inscriptos', 'Inscriptos')),
             objetivos: rec('Objetivos del Taller', 'Objetivos'),
+            planTrabajo: rec('Plan de trabajo'),
+            materiales: rec('Materiales'),
+            notasEvolucion: rec('Evolución taller', 'Evolucion taller'),
             activo: !['no', 'false', '0', 'inactivo'].includes(normalizeText(rec('Activo') || 'si')),
-          };
+          });
+          result.items.push(item);
+          break;
+        }
+        case 'medicaciones': {
+          const pacienteId = rec('ID Paciente');
+          const droga = rec('Droga', 'Nombre genérico', 'Medicamento');
+          if (!droga) return fail('falta la droga.');
+          if (!db.pacientes.some((p) => p.id === pacienteId)) return fail(`el paciente "${pacienteId}" no existe.`);
+          const inicio = parseDateLoose(rec('Fecha inicio', 'Inicio'));
+          if (inicio === null) return fail('fecha de inicio inválida.');
+          const item = normalizeMedicacion({
+            id: rec('ID') || '',
+            pacienteId,
+            droga,
+            presentacion: rec('Presentación', 'Presentacion'),
+            concentracion: rec('Concentración', 'Concentracion'),
+            dosis: rec('Dosis'),
+            horarios: rec('Horarios'),
+            fechaInicio: inicio || '',
+            observaciones: rec('Observaciones'),
+            activo: !['no', 'false', '0', 'suspendida'].includes(normalizeText(rec('Activa') || 'si')),
+            historial: [],
+          } satisfies Medicacion);
           result.items.push(item);
           break;
         }
@@ -252,6 +334,7 @@ function assignMissingIds(key: CollectionKey, result: CsvImportResult, db: Datab
     talleres: { prefix: 'TAL-', pad: 2 },
     facturacion: { prefix: 'FAC-', pad: 3 },
     areas: { prefix: 'ARE-', pad: 2 },
+    medicaciones: { prefix: 'MED-', pad: 4 },
   };
   const items = result.items as { id: string; periodo?: string }[];
   const all = new Set<string>([...(db[key] as { id: string }[]).map((x) => x.id), ...items.map((x) => x.id).filter(Boolean), ...used]);
