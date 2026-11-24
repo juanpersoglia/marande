@@ -90,7 +90,9 @@ export default function PacienteFichaPage() {
           <>
             <Button variant="secondary" onClick={() => setEdit(true)}><Pencil className="size-4" />Editar</Button>
             <Button onClick={() => setNuevaEvo(true)}><ClipboardPlus className="size-4" />Nueva evolución</Button>
-            <Button variant="ghost" className="text-red-600 hover:bg-red-50" onClick={removePaciente}><Trash2 className="size-4" /></Button>
+            <Button variant="ghost" className="text-red-600 hover:bg-red-50" onClick={removePaciente}>
+              <Trash2 className="size-4" /><span className="sm:hidden">Eliminar</span>
+            </Button>
           </>
         }
       />

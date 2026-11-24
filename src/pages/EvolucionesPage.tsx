@@ -97,7 +97,7 @@ export default function EvolucionesPage() {
         }
       />
 
-      <Card className="mb-4 p-4">
+      <Card className="mb-4 p-3 sm:p-4">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <SearchInput className="md:col-span-2 xl:col-span-3" value={q} onChange={(v) => set('q', v)} placeholder="Buscar en notas, objetivos, paciente o profesional..." />
           <Select value={pacienteId} onChange={(e) => set('paciente', e.target.value)} aria-label="Paciente">

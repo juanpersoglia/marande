@@ -143,7 +143,7 @@ export default function DatosPage() {
         description="Importá / exportá JSON o CSV para no perder información al cambiar de navegador o equipo. La capa de repositorio permite migrar a API, Supabase o Sheets sin reescribir la interfaz."
       />
 
-      <div className="mb-6 rounded-xl border border-brand-200 bg-brand-50 px-5 py-4 text-sm text-brand-900">
+      <div className="mb-6 rounded-xl border border-brand-200 bg-brand-50 px-4 py-4 text-sm text-brand-900 sm:px-5">
         <p className="font-semibold">Almacenamiento actual: {storage.label}</p>
         <p className="mt-1 text-brand-800">
           {storage.kind === 'local'

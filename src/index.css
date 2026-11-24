@@ -20,9 +20,14 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    overflow-x: clip;
   }
   body {
-    @apply bg-slate-100 font-sans text-slate-800 antialiased;
+    @apply overflow-x-clip bg-slate-100 font-sans text-slate-800 antialiased;
+  }
+  #root {
+    min-width: 0;
+    overflow-x: clip;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-500;
@@ -36,19 +41,20 @@
 
 @layer components {
   .field-control {
-    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-xs
+    @apply block w-full min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-xs
       placeholder:text-slate-400
       focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none
-      disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500;
+      disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500
+      sm:min-h-10 sm:py-2 sm:text-sm;
   }
   .field-control[aria-invalid='true'] {
     @apply border-red-400 focus:border-red-500 focus:ring-red-500/20;
   }
   .th {
-    @apply px-4 py-2.5 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-slate-500 uppercase;
+    @apply px-3 py-2.5 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-slate-500 uppercase sm:px-4;
   }
   .td {
-    @apply px-4 py-3 align-middle text-sm;
+    @apply px-3 py-3 align-middle text-sm sm:px-4;
   }
 }
 

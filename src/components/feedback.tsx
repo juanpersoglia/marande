@@ -65,7 +65,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   return (
     <FeedbackContext.Provider value={{ toast, toastError, confirm }}>
       {children}
-      <div className="no-print pointer-events-none fixed right-4 bottom-4 z-[60] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2" aria-live="polite">
+      <div className="no-print pointer-events-none fixed right-3 bottom-3 z-[60] flex w-[calc(100%-1.5rem)] max-w-sm flex-col gap-2 sm:right-4 sm:bottom-4" aria-live="polite">
         {toasts.map((t) => {
           const Icon = icons[t.tone];
           return (

@@ -24,9 +24,9 @@ export function Button({
       type={type}
       className={cn(
         'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-70',
-        size === 'sm' && 'px-2.5 py-1.5 text-xs',
-        size === 'md' && 'px-3.5 py-2 text-sm',
-        size === 'lg' && 'px-5 py-3 text-base',
+        size === 'sm' && 'min-h-9 px-2.5 py-1.5 text-xs',
+        size === 'md' && 'min-h-11 px-3.5 py-2.5 text-sm sm:min-h-10 sm:py-2',
+        size === 'lg' && 'min-h-12 px-5 py-3 text-base',
         buttonStyles[variant],
         className,
       )}
@@ -46,7 +46,7 @@ export function IconButton({
       type={type}
       aria-label={label}
       title={label}
-      className={cn('inline-flex size-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800', className)}
+      className={cn('inline-flex size-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 sm:size-8', className)}
       {...props}
     />
   );
@@ -59,8 +59,8 @@ export function Card({ className, children }: { className?: string; children: Re
 
 export function CardHeader({ title, description, actions }: { title: ReactNode; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-      <div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5 sm:py-4">
+      <div className="min-w-0">
         <h2 className="text-base font-semibold text-slate-900">{title}</h2>
         {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
       </div>
@@ -71,12 +71,16 @@ export function CardHeader({ title, description, actions }: { title: ReactNode; 
 
 export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
+    <header className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+      <div className="min-w-0 flex-1">
+        <h1 className="text-xl font-bold tracking-tight break-words text-slate-900 sm:text-2xl">{title}</h1>
         {description && <p className="mt-1 max-w-3xl text-sm text-slate-500">{description}</p>}
       </div>
-      {actions && <div className="no-print flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && (
+        <div className="no-print flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center [&>button]:w-full sm:[&>button]:w-auto">
+          {actions}
+        </div>
+      )}
     </header>
   );
 }
@@ -121,13 +125,13 @@ export function StatCard({
     emerald: 'bg-emerald-50 text-emerald-700',
   };
   return (
-    <Card className="p-5">
+    <Card className="p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-1.5 truncate text-3xl font-bold tracking-tight text-slate-900">{value}</p>
+          <p className="mt-1.5 text-2xl font-bold tracking-tight break-words text-slate-900 sm:text-3xl">{value}</p>
         </div>
-        <div className={cn('flex size-11 shrink-0 items-center justify-center rounded-xl', tones[tone])}>{icon}</div>
+        <div className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl sm:size-11', tones[tone])}>{icon}</div>
       </div>
       {hint && <p className="mt-3 text-sm text-slate-500">{hint}</p>}
     </Card>
@@ -259,20 +263,24 @@ export function Modal({
   if (!open) return null;
   const widths = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl' };
   return (
-    <div className="no-print fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="no-print fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4 md:p-6" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]" onClick={onClose} />
-      <div className={cn('relative flex max-h-[94vh] w-full flex-col rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl', widths[size])}>
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+      <div className={cn('relative flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-2xl', widths[size])}>
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:gap-4 sm:px-6">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold break-words text-slate-900 sm:text-lg">{title}</h2>
             {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
           </div>
-          <IconButton label="Cerrar" onClick={onClose}>
+          <IconButton label="Cerrar" onClick={onClose} className="shrink-0">
             <X className="size-5" />
           </IconButton>
         </div>
-        <div className="overflow-y-auto px-6 py-5">{children}</div>
-        {footer && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-6 py-3 sm:rounded-b-2xl">{footer}</div>}
+        <div className="overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">{children}</div>
+        {footer && (
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:rounded-b-2xl sm:px-6 [&>button]:w-full sm:[&>button]:w-auto">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -280,5 +288,5 @@ export function Modal({
 
 // ---------- Tabla ----------
 export function TableWrap({ children }: { children: ReactNode }) {
-  return <div className="overflow-x-auto">{children}</div>;
+  return <div className="-mx-px overflow-x-auto overscroll-x-contain">{children}</div>;
 }

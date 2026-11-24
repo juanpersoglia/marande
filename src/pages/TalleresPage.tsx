@@ -57,7 +57,7 @@ export default function TalleresPage() {
         actions={<Button onClick={() => setNuevo(true)}><Plus className="size-4" />Nuevo taller</Button>}
       />
 
-      <Card className="mb-4 p-4">
+      <Card className="mb-4 p-3 sm:p-4">
         <div className="grid gap-3 sm:grid-cols-3">
           <SearchInput className="sm:col-span-2" value={q} onChange={setQ} placeholder="Buscar por nombre, ID, horario o terapeuta..." />
           <Select value={estado} onChange={(e) => setEstado(e.target.value as typeof estado)} aria-label="Estado">
